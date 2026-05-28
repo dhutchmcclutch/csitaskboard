@@ -371,6 +371,17 @@ body::after {
 </head>
 <body>
 
+<!-- LOADING OVERLAY -->
+<div id="loader" style="position:fixed;inset:0;background:#111111;display:flex;align-items:center;justify-content:center;z-index:9000;flex-direction:column;gap:16px;">
+  <div style="font-family:'Oswald',sans-serif;font-size:28px;font-weight:700;color:#82c402;letter-spacing:2px;">CENTERFIRE SYSTEMS</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#888888;letter-spacing:3px;">CONNECTING TO DATABASE...</div>
+  <div style="width:200px;height:3px;background:#333;border-radius:2px;overflow:hidden;margin-top:8px;">
+    <div style="width:40%;height:100%;background:#82c402;border-radius:2px;animation:ldbar 1.2s ease-in-out infinite;"></div>
+  </div>
+  <style>@keyframes ldbar{0%{transform:translateX(-100%);}100%{transform:translateX(350%);opacity:0;}}</style>
+</div>
+
+
 <!-- DISPLAY BOARD -->
 <div class="hdr">
   <div class="hdr-brand">
@@ -636,43 +647,106 @@ body::after {
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ═══════════════════════════════════════════════
+   FIREBASE INIT
+═══════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCkaVk7QXg0ZkHxuX1URah4SDFweCvCXhI",
+  authDomain: "csitaskboard.firebaseapp.com",
+  projectId: "csitaskboard",
+  storageBucket: "csitaskboard.firebasestorage.app",
+  messagingSenderId: "952539865381",
+  appId: "1:952539865381:web:4001aaa87525c235ea3acc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const STATE_DOC = doc(db, 'taskboard', 'state');
+
 /* ═══════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════ */
-const SKEY = 'wh_taskboard_v3';
 const PKEY = 'wh_taskboard_pin';
 const DEFAULT_PIN = '3245';
 
-let state = { employees: [], tasks: [], templates: [], shiftNote: '', resetTime: '', autoHideMins: 0, weatherEnabled: false };
+let state = {
+  employees: [], tasks: [], templates: [],
+  shiftNote: '', resetTime: '', autoHideMins: 0, weatherEnabled: false
+};
 let mgrOpen = false;
 let curPri = 'low';
 let selEmps = [];
 let editSelEmps = [];
 let editTaskId = null;
 let allClearShown = false;
-let lastTaskCount = 0;
+let prevHighCount = 0;
+let dbLoaded = false;
 
 function getPin() { return localStorage.getItem(PKEY) || DEFAULT_PIN; }
 
-function loadState() {
-  const r = localStorage.getItem(SKEY);
-  if (r) { state = JSON.parse(r); }
-  else { state = { employees:['Mike','Jon','Oscar','Jason','Sarah','Shelby','Chris','Kalin'], tasks:[], templates:[], shiftNote:'', resetTime:'', autoHideMins:0, weatherEnabled:false }; }
-  // migrate
-  if (!state.templates)    state.templates    = [];
-  if (!state.shiftNote)    state.shiftNote    = '';
-  if (!state.resetTime)    state.resetTime    = '';
-  if (!state.autoHideMins) state.autoHideMins = 0;
-  if (state.weatherEnabled === undefined) state.weatherEnabled = false;
-  state.tasks.forEach(t => {
-    if (!t.assignees)  t.assignees  = t.assignee ? [t.assignee] : [];
-    if (!t.schedDate)  t.schedDate  = '';
-    if (!t.startedAt)  t.startedAt  = null;
+function normalizeState(s) {
+  if (!s) s = {};
+  if (!s.employees)    s.employees    = ['Mike','Jon','Oscar','Jason','Sarah','Shelby','Chris','Kalin'];
+  if (!s.tasks)        s.tasks        = [];
+  if (!s.templates)    s.templates    = [];
+  if (!s.shiftNote)    s.shiftNote    = '';
+  if (!s.resetTime)    s.resetTime    = '';
+  if (!s.autoHideMins) s.autoHideMins = 0;
+  if (s.weatherEnabled === undefined) s.weatherEnabled = false;
+  s.tasks.forEach(t => {
+    if (!t.assignees) t.assignees = t.assignee ? [t.assignee] : [];
+    if (!t.schedDate) t.schedDate = '';
+    if (!t.startedAt) t.startedAt = null;
+  });
+  return s;
+}
+
+/* ═══════════════════════════════════════════════
+   FIREBASE SAVE / REAL-TIME LISTENER
+═══════════════════════════════════════════════ */
+async function save() {
+  try {
+    await setDoc(STATE_DOC, state);
+  } catch(e) {
+    console.error('Firebase save error:', e);
+  }
+}
+
+function startListener() {
+  onSnapshot(STATE_DOC, (snap) => {
+    if (snap.exists()) {
+      state = normalizeState(snap.data());
+    } else {
+      state = normalizeState({});
+      save();
+    }
+    dbLoaded = true;
+    hideLoader();
+    renderBoard();
+    scaleBoard();
+    updateShiftNote();
+    if (!mgrOpen) checkAllClear();
+    if (state.weatherEnabled) fetchWeather();
+    if (mgrOpen) renderPanel();
+  }, (err) => {
+    console.error('Firestore listener error:', err);
+    showError('Connection error. Check your internet connection.');
   });
 }
 
-function save() { localStorage.setItem(SKEY, JSON.stringify(state)); }
+function hideLoader() {
+  const l = document.getElementById('loader');
+  if (l) l.style.display = 'none';
+}
+
+function showError(msg) {
+  const l = document.getElementById('loader');
+  if (l) { l.innerHTML = `<div style="text-align:center;color:#e84422;font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:1px;">${msg}</div>`; }
+}
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -715,13 +789,12 @@ function tick() {
     n.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.getElementById('clock-date').textContent =
     n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-
-  // Daily reset check
   if (state.resetTime) {
     const [rh,rm] = state.resetTime.split(':').map(Number);
     if (n.getHours()===rh && n.getMinutes()===rm && n.getSeconds()===0) {
       state.tasks = state.tasks.filter(t=>t.status!=='done');
-      allClearShown = false; save(); renderBoard(); scaleBoard();
+      allClearShown = false;
+      save();
     }
   }
 }
@@ -730,34 +803,30 @@ function tick() {
    WEATHER
 ═══════════════════════════════════════════════ */
 function enableWeather() {
-  state.weatherEnabled = true; save();
+  state.weatherEnabled = true;
+  save();
   fetchWeather();
   document.getElementById('weather-widget').style.display = 'flex';
 }
 
 function disableWeather() {
-  state.weatherEnabled = false; save();
+  state.weatherEnabled = false;
+  save();
   document.getElementById('weather-widget').style.display = 'none';
 }
 
 function fetchWeather() {
-  if (!state.weatherEnabled) return;
-  if (!navigator.geolocation) return;
+  if (!state.weatherEnabled || !navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(pos => {
     const {latitude:lat, longitude:lon} = pos.coords;
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`)
-      .then(r=>r.json())
-      .then(d=>{
-        const cw = d.current_weather;
-        const temp = Math.round(cw.temperature);
-        const code = cw.weathercode;
-        const icons = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',61:'🌧️',71:'🌨️',80:'🌦️',95:'⛈️'};
-        const descs = {0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',51:'Drizzle',61:'Rainy',71:'Snowy',80:'Showers',95:'Thunderstorm'};
-        const icon = icons[code] || '🌡️';
-        const desc = descs[code] || 'Weather';
-        document.getElementById('w-icon').textContent  = icon;
-        document.getElementById('w-temp').textContent  = temp + '°F';
-        document.getElementById('w-desc').textContent  = desc;
+      .then(r=>r.json()).then(d=>{
+        const cw=d.current_weather, temp=Math.round(cw.temperature), code=cw.weathercode;
+        const icons={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',51:'🌦️',61:'🌧️',71:'🌨️',80:'🌦️',95:'⛈️'};
+        const descs={0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Foggy',51:'Drizzle',61:'Rainy',71:'Snowy',80:'Showers',95:'Thunderstorm'};
+        document.getElementById('w-icon').textContent = icons[code]||'🌡️';
+        document.getElementById('w-temp').textContent = temp+'°F';
+        document.getElementById('w-desc').textContent = descs[code]||'Weather';
         document.getElementById('weather-widget').style.display = 'flex';
       }).catch(()=>{});
   }, ()=>{});
@@ -772,17 +841,16 @@ function focusPinInput() {
 }
 
 function onPinInput() {
-  const val = document.getElementById('pin-inp').value;
-  const len = val.length; const pin = getPin();
-  for (let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.classList.toggle('filled',i<len);}
-  const vis = document.getElementById('pin-vis');
-  vis.textContent = len>0 ? '• '.repeat(len).trim() : 'Enter your PIN';
+  const val=document.getElementById('pin-inp').value;
+  const len=val.length; const pin=getPin();
+  for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.classList.toggle('filled',i<len);}
+  document.getElementById('pin-vis').textContent=len>0?'• '.repeat(len).trim():'Enter your PIN';
   document.getElementById('pin-err').textContent='';
-  if (len===pin.length) setTimeout(checkPin,150);
+  if(len===pin.length) setTimeout(checkPin,150);
 }
 
 function openPinModal() {
-  if (mgrOpen){closeManager();return;}
+  if(mgrOpen){closeManager();return;}
   document.getElementById('pin-overlay').classList.add('open');
   for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.classList.remove('filled');}
   document.getElementById('pin-vis').textContent='Enter your PIN';
@@ -814,7 +882,6 @@ function openManager() {
   document.getElementById('mgr-btn').classList.add('active');
   document.body.classList.add('mgr-open');
   renderPanel();
-  // load saved settings into fields
   if(state.resetTime) document.getElementById('reset-time').value=state.resetTime;
   if(state.autoHideMins) document.getElementById('autohide-mins').value=state.autoHideMins;
   if(state.shiftNote) document.getElementById('shift-note-inp').value=state.shiftNote;
@@ -844,10 +911,10 @@ const TABS=['assign','templates','team','history','export','settings'];
 function switchTab(name){
   TABS.forEach(t=>{document.getElementById('tab-'+t).style.display=t===name?'block':'none';});
   document.querySelectorAll('.ptab').forEach(el=>el.classList.toggle('active',el.dataset.tab===name));
-  if(name==='history') renderHistory();
-  if(name==='team')    renderTeam();
+  if(name==='history')   renderHistory();
+  if(name==='team')      renderTeam();
   if(name==='templates') renderTemplates();
-  if(name==='export')  { generateExport(); }
+  if(name==='export')    generateExport();
 }
 
 /* ═══════════════════════════════════════════════
@@ -858,14 +925,14 @@ function addEmp(){
   if(!name||state.employees.includes(name))return;
   state.employees.push(name);
   document.getElementById('new-emp').value='';
-  save();renderPanel();renderBoard();scaleBoard();
+  save();
 }
 
 function removeEmp(name){
   if(!confirm('Remove '+name+'?'))return;
   state.employees=state.employees.filter(e=>e!==name);
   selEmps=selEmps.filter(e=>e!==name);
-  save();renderPanel();renderBoard();scaleBoard();
+  save();
 }
 
 function renderTeam(){
@@ -891,12 +958,17 @@ function renderTeam(){
 function renderEmpMulti(id,sel,fn){
   const el=document.getElementById(id);if(!el)return;
   el.innerHTML=state.employees.map(e=>
-    `<button class="emp-tog ${sel.includes(e)?'sel':''}" onclick="${fn}('${e}')">${e}</button>`
+    `<button class="emp-tog ${sel.includes(e)?'sel':''}" onclick="window._empFns['${fn}']('${e}')">${e}</button>`
   ).join('');
 }
 
-function toggleSelEmp(n){selEmps=selEmps.includes(n)?selEmps.filter(e=>e!==n):[...selEmps,n];renderEmpMulti('assign-emp-multi',selEmps,'toggleSelEmp');}
-function toggleEditEmp(n){editSelEmps=editSelEmps.includes(n)?editSelEmps.filter(e=>e!==n):[...editSelEmps,n];renderEmpMulti('e-emp-multi',editSelEmps,'toggleEditEmp');}
+window._empFns = {
+  toggleSelEmp: (n) => { selEmps=selEmps.includes(n)?selEmps.filter(e=>e!==n):[...selEmps,n]; renderEmpMulti('assign-emp-multi',selEmps,'toggleSelEmp'); },
+  toggleEditEmp: (n) => { editSelEmps=editSelEmps.includes(n)?editSelEmps.filter(e=>e!==n):[...editSelEmps,n]; renderEmpMulti('e-emp-multi',editSelEmps,'toggleEditEmp'); }
+};
+
+function toggleSelEmp(n){ window._empFns.toggleSelEmp(n); }
+function toggleEditEmp(n){ window._empFns.toggleEditEmp(n); }
 
 function bulkAssignAll(){
   selEmps=[...state.employees];
@@ -911,14 +983,14 @@ function saveTemplate(){
   const title=document.getElementById('tmpl-title').value.trim();
   if(!name||!title){alert('Enter a template name and task title.');return;}
   state.templates.push({
-    id:Date.now().toString(), name,
-    title, priority:document.getElementById('tmpl-pri').value,
+    id:Date.now().toString(), name, title,
+    priority:document.getElementById('tmpl-pri').value,
     notes:document.getElementById('tmpl-notes').value.trim()
   });
   document.getElementById('tmpl-name').value='';
   document.getElementById('tmpl-title').value='';
   document.getElementById('tmpl-notes').value='';
-  save(); renderTemplates();
+  save();
 }
 
 function applyTemplate(id){
@@ -931,20 +1003,15 @@ function applyTemplate(id){
 
 function deleteTemplate(id){
   state.templates=state.templates.filter(t=>t.id!==id);
-  save();renderTemplates();
+  save();
 }
 
 function renderTemplates(){
   const el=document.getElementById('tmpl-list');if(!el)return;
-  if(state.templates.length===0){
-    el.innerHTML=`<div class="tmpl-empty">No templates saved yet.</div>`;return;
-  }
+  if(!state.templates.length){el.innerHTML=`<div class="tmpl-empty">No templates saved yet.</div>`;return;}
   el.innerHTML=state.templates.map(t=>`
     <div class="tmpl-item" onclick="applyTemplate('${t.id}')">
-      <div>
-        <div class="tmpl-item-name">${t.name}</div>
-        <div class="tmpl-item-meta">${t.title} · ${t.priority}</div>
-      </div>
+      <div><div class="tmpl-item-name">${t.name}</div><div class="tmpl-item-meta">${t.title} · ${t.priority}</div></div>
       <button class="tmpl-del" onclick="event.stopPropagation();deleteTemplate('${t.id}')">×</button>
     </div>`).join('');
 }
@@ -963,40 +1030,38 @@ function addTask(){
     priority:curPri, status,
     schedDate:document.getElementById('f-date').value||'',
     createdAt:new Date().toISOString(), completedAt:null,
-    startedAt: status==='inprogress' ? new Date().toISOString() : null
+    startedAt:status==='inprogress'?new Date().toISOString():null
   });
   document.getElementById('f-title').value='';
   document.getElementById('f-notes').value='';
   document.getElementById('f-date').value='';
   selEmps=[];
   renderEmpMulti('assign-emp-multi',selEmps,'toggleSelEmp');
-  save();renderBoard();scaleBoard();renderPanel();
+  save();
   playSound('assign');
 }
 
 function markDone(id){
   const t=state.tasks.find(t=>t.id===id);if(!t)return;
   t.status='done';t.completedAt=new Date().toISOString();t.schedDate='';t.startedAt=null;
-  save();renderBoard();scaleBoard();if(mgrOpen)renderPanel();
-  playSound('done');
-  checkAllClear();
+  save(); playSound('done');
 }
 
 function markInProgress(id){
   const t=state.tasks.find(t=>t.id===id);if(!t)return;
   if(t.status==='inprogress'){t.status='todo';t.startedAt=null;}
   else{t.status='inprogress';t.startedAt=new Date().toISOString();t.schedDate='';}
-  save();renderBoard();scaleBoard();if(mgrOpen)renderPanel();
+  save();
 }
 
 function deleteTask(id){
   state.tasks=state.tasks.filter(t=>t.id!==id);
-  save();renderBoard();scaleBoard();if(mgrOpen)renderPanel();
+  save();
 }
 
 function openEditTask(id){
   const t=state.tasks.find(t=>t.id===id);if(!t)return;
-  editTaskId=id;editSelEmps=[...(t.assignees||[])];
+  editTaskId=id; editSelEmps=[...(t.assignees||[])];
   renderEmpMulti('e-emp-multi',editSelEmps,'toggleEditEmp');
   document.getElementById('e-title').value=t.title;
   document.getElementById('e-priority').value=t.priority;
@@ -1020,22 +1085,19 @@ function saveEditTask(){
   t.status=newStatus;
   t.schedDate=document.getElementById('e-date').value||'';
   t.notes=document.getElementById('e-notes').value.trim();
-  if(t.status==='done'&&!t.completedAt)t.completedAt=new Date().toISOString();
-  save();renderBoard();scaleBoard();renderPanel();closeEditTask();
-  checkAllClear();
+  if(t.status==='done'&&!t.completedAt) t.completedAt=new Date().toISOString();
+  save(); closeEditTask();
 }
 
 function clearCompleted(){
   if(!confirm('Remove all completed tasks?'))return;
   state.tasks=state.tasks.filter(t=>t.status!=='done');
-  allClearShown=false;
-  save();renderBoard();scaleBoard();renderPanel();
+  allClearShown=false; save();
 }
 
 function clearAllTasks(){
   if(!confirm('Remove ALL tasks?'))return;
-  state.tasks=[];allClearShown=false;
-  save();renderBoard();scaleBoard();renderPanel();
+  state.tasks=[]; allClearShown=false; save();
 }
 
 function setPri(p){
@@ -1044,11 +1106,11 @@ function setPri(p){
 }
 
 /* ═══════════════════════════════════════════════
-   ALL CLEAR CHECK
+   ALL CLEAR
 ═══════════════════════════════════════════════ */
 function checkAllClear(){
   const tasks=state.tasks;
-  if(tasks.length===0)return;
+  if(!tasks.length)return;
   const allDone=tasks.every(t=>t.status==='done'||isScheduled(t));
   if(allDone&&!allClearShown){
     allClearShown=true;
@@ -1060,18 +1122,17 @@ function checkAllClear(){
 }
 
 /* ═══════════════════════════════════════════════
-   SOUND ALERTS
+   SOUND
 ═══════════════════════════════════════════════ */
 function playSound(type){
   try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator();
-    const gain=ctx.createGain();
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(),gain=ctx.createGain();
     osc.connect(gain);gain.connect(ctx.destination);
-    if(type==='assign'){osc.frequency.setValueAtTime(880,ctx.currentTime);osc.frequency.setValueAtTime(1100,ctx.currentTime+0.1);gain.gain.setValueAtTime(0.15,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);}
-    else if(type==='done'){osc.frequency.setValueAtTime(660,ctx.currentTime);osc.frequency.setValueAtTime(880,ctx.currentTime+0.08);osc.frequency.setValueAtTime(1320,ctx.currentTime+0.16);gain.gain.setValueAtTime(0.15,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);}
-    else if(type==='allclear'){osc.frequency.setValueAtTime(523,ctx.currentTime);osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);osc.frequency.setValueAtTime(784,ctx.currentTime+0.2);osc.frequency.setValueAtTime(1047,ctx.currentTime+0.3);gain.gain.setValueAtTime(0.2,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.8);}
-    else if(type==='high'){osc.type='square';osc.frequency.setValueAtTime(440,ctx.currentTime);osc.frequency.setValueAtTime(220,ctx.currentTime+0.1);gain.gain.setValueAtTime(0.15,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);}
+    if(type==='assign'){osc.frequency.setValueAtTime(880,ctx.currentTime);osc.frequency.setValueAtTime(1100,ctx.currentTime+0.1);gain.gain.setValueAtTime(0.12,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);}
+    else if(type==='done'){osc.frequency.setValueAtTime(660,ctx.currentTime);osc.frequency.setValueAtTime(880,ctx.currentTime+0.08);osc.frequency.setValueAtTime(1320,ctx.currentTime+0.16);gain.gain.setValueAtTime(0.12,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);}
+    else if(type==='allclear'){osc.frequency.setValueAtTime(523,ctx.currentTime);osc.frequency.setValueAtTime(659,ctx.currentTime+0.1);osc.frequency.setValueAtTime(784,ctx.currentTime+0.2);osc.frequency.setValueAtTime(1047,ctx.currentTime+0.3);gain.gain.setValueAtTime(0.18,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.8);}
+    else if(type==='high'){osc.type='square';osc.frequency.setValueAtTime(440,ctx.currentTime);osc.frequency.setValueAtTime(220,ctx.currentTime+0.1);gain.gain.setValueAtTime(0.12,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);}
     osc.start(ctx.currentTime);osc.stop(ctx.currentTime+1);
   }catch(e){}
 }
@@ -1081,12 +1142,12 @@ function playSound(type){
 ═══════════════════════════════════════════════ */
 function setShiftNote(){
   state.shiftNote=document.getElementById('shift-note-inp').value.trim();
-  save(); updateShiftNote();
+  save();
 }
 function clearShiftNote(){
   state.shiftNote='';
   document.getElementById('shift-note-inp').value='';
-  save(); updateShiftNote();
+  save();
 }
 function updateShiftNote(){
   const el=document.getElementById('hdr-note');
@@ -1097,29 +1158,17 @@ function updateShiftNote(){
 /* ═══════════════════════════════════════════════
    SETTINGS HELPERS
 ═══════════════════════════════════════════════ */
-function saveResetTime(){
-  state.resetTime=document.getElementById('reset-time').value;
-  save(); updateResetStatus();
-}
-function clearResetTime(){
-  state.resetTime='';
-  document.getElementById('reset-time').value='';
-  save(); updateResetStatus();
-}
+function saveResetTime(){state.resetTime=document.getElementById('reset-time').value;save();updateResetStatus();}
+function clearResetTime(){state.resetTime='';document.getElementById('reset-time').value='';save();updateResetStatus();}
 function updateResetStatus(){
-  const el=document.getElementById('reset-status');
-  if(!el)return;
-  el.textContent=state.resetTime?`✓ Auto-reset enabled at ${state.resetTime}`:'Auto-reset disabled.';
+  const el=document.getElementById('reset-status');if(!el)return;
+  el.textContent=state.resetTime?`✓ Auto-reset at ${state.resetTime}`:'Auto-reset disabled.';
   el.style.color=state.resetTime?'var(--green)':'var(--muted)';
 }
-
-function saveAutoHide(){
-  state.autoHideMins=parseInt(document.getElementById('autohide-mins').value)||0;
-  save(); updateAutoHideStatus();
-}
+function saveAutoHide(){state.autoHideMins=parseInt(document.getElementById('autohide-mins').value)||0;save();updateAutoHideStatus();}
 function updateAutoHideStatus(){
   const el=document.getElementById('autohide-status');if(!el)return;
-  el.textContent=state.autoHideMins>0?`✓ Completed tasks hidden after ${state.autoHideMins} min`:'Auto-hide disabled.';
+  el.textContent=state.autoHideMins>0?`✓ Hide completed after ${state.autoHideMins} min`:'Auto-hide disabled.';
   el.style.color=state.autoHideMins>0?'var(--green)':'var(--muted)';
 }
 
@@ -1131,46 +1180,29 @@ function generateExport(){
   const tasks=state.tasks;
   const done=tasks.filter(t=>t.status==='done');
   const active=tasks.filter(t=>t.status!=='done'&&!isScheduled(t));
-
   let lines=[
-    `CENTERFIRE SYSTEMS — DAILY SHIFT SUMMARY`,
-    `${today}`,
-    `${'─'.repeat(44)}`,
-    ``,
+    `CENTERFIRE SYSTEMS — DAILY SHIFT SUMMARY`,`${today}`,`${'─'.repeat(44)}`,``,
     `TOTALS`,
     `  Total Tasks:     ${tasks.length}`,
     `  Completed:       ${done.length}`,
     `  Still Active:    ${active.length}`,
-    `  Completion Rate: ${tasks.length>0?Math.round(done.length/tasks.length*100):0}%`,
-    ``,
+    `  Completion Rate: ${tasks.length>0?Math.round(done.length/tasks.length*100):0}%`,``
   ];
-
   if(state.shiftNote){lines.push(`SHIFT NOTE: ${state.shiftNote}`);lines.push('');}
-
   lines.push(`COMPLETED TASKS`);
-  if(done.length===0){lines.push('  (none)');}
-  else{
-    done.forEach(t=>{
-      const assignees=(t.assignees||[]).join(', ');
-      lines.push(`  ✓ ${t.title}`);
-      lines.push(`    Assigned: ${assignees}`);
-      if(t.completedAt) lines.push(`    Completed: ${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}`);
-    });
-  }
-
-  lines.push('');
-  lines.push(`ACTIVE / INCOMPLETE`);
-  if(active.length===0){lines.push('  (none — great shift!)');}
-  else{
-    active.forEach(t=>{
-      const assignees=(t.assignees||[]).join(', ');
-      lines.push(`  • [${t.priority.toUpperCase()}] ${t.title}`);
-      lines.push(`    Assigned: ${assignees}`);
-    });
-  }
-
-  const txt=lines.join('\n');
-  document.getElementById('export-box').textContent=txt;
+  if(!done.length){lines.push('  (none)');}
+  else{done.forEach(t=>{
+    lines.push(`  ✓ ${t.title}`);
+    lines.push(`    Assigned: ${(t.assignees||[]).join(', ')}`);
+    if(t.completedAt) lines.push(`    Completed: ${new Date(t.completedAt).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}`);
+  });}
+  lines.push('');lines.push(`ACTIVE / INCOMPLETE`);
+  if(!active.length){lines.push('  (none — great shift!)');}
+  else{active.forEach(t=>{
+    lines.push(`  • [${t.priority.toUpperCase()}] ${t.title}`);
+    lines.push(`    Assigned: ${(t.assignees||[]).join(', ')}`);
+  });}
+  document.getElementById('export-box').textContent=lines.join('\n');
 }
 
 function copyExport(){
@@ -1186,14 +1218,11 @@ function copyExport(){
    HISTORY
 ═══════════════════════════════════════════════ */
 function renderHistory(){
-  const se=document.getElementById('h-search');
-  const ee=document.getElementById('h-emp');
-  const ste=document.getElementById('h-status');
+  const se=document.getElementById('h-search'),ee=document.getElementById('h-emp'),ste=document.getElementById('h-status');
   if(!se||!ee)return;
-  const q=se.value.toLowerCase(), emp=ee.value, status=ste?ste.value:'';
+  const q=se.value.toLowerCase(),emp=ee.value,status=ste?ste.value:'';
   const curVal=ee.value;
-  ee.innerHTML='<option value="">All Employees</option>'+
-    state.employees.map(e=>`<option value="${e}" ${e===curVal?'selected':''}>${e}</option>`).join('');
+  ee.innerHTML='<option value="">All Employees</option>'+state.employees.map(e=>`<option value="${e}" ${e===curVal?'selected':''}>${e}</option>`).join('');
   const all=[...state.tasks].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const filtered=all.filter(t=>{
     const mq=!q||t.title.toLowerCase().includes(q)||(t.notes||'').toLowerCase().includes(q)||(t.assignees||[]).join(' ').toLowerCase().includes(q);
@@ -1207,7 +1236,7 @@ function renderHistory(){
   const stLbl={todo:'To Do',inprogress:'In Progress',done:'Done',scheduled:'Scheduled'};
   const stCls={todo:'tag-todo',inprogress:'tag-inp',done:'tag-done',scheduled:'tag-scheduled'};
   const el=document.getElementById('hist-list');
-  if(filtered.length===0){el.innerHTML=`<div class="hist-empty">No tasks match.</div>`;return;}
+  if(!filtered.length){el.innerHTML=`<div class="hist-empty">No tasks match.</div>`;return;}
   el.innerHTML=filtered.map((t,i)=>{
     const aStr=(t.assignees||[]).join(', ');
     const ds=displayStatus(t);
@@ -1215,10 +1244,7 @@ function renderHistory(){
                t.schedDate?'Scheduled for '+formatDate(t.schedDate):
                'Created '+new Date(t.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'});
     return `<div class="hist-item pri-${t.priority}" style="animation-delay:${i*0.02}s;">
-      <div class="hi-top">
-        <div class="hi-title" style="${t.status==='done'?'text-decoration:line-through;color:var(--muted);':''}">${t.title}</div>
-        <div class="hi-date">${dStr}</div>
-      </div>
+      <div class="hi-top"><div class="hi-title" style="${t.status==='done'?'text-decoration:line-through;color:var(--muted);':''}">${t.title}</div><div class="hi-date">${dStr}</div></div>
       <div class="hi-emp">👤 ${aStr}</div>
       <div class="hi-tags">
         <span class="tag tag-${t.priority}">${t.priority}</span>
@@ -1231,9 +1257,7 @@ function renderHistory(){
         <button class="btn btn-ghost btn-sm" onclick="openEditTask('${t.id}')">✎ Edit</button>
         <button class="btn btn-red btn-sm"   onclick="deleteTask('${t.id}');renderHistory()">Delete</button>
       </div>`:`
-      <div style="margin-top:6px;">
-        <button class="btn btn-red btn-sm" onclick="deleteTask('${t.id}');renderHistory()">Delete</button>
-      </div>`}
+      <div style="margin-top:6px;"><button class="btn btn-red btn-sm" onclick="deleteTask('${t.id}');renderHistory()">Delete</button></div>`}
     </div>`;
   }).join('');
 }
@@ -1246,7 +1270,7 @@ function renderPanel(){
   renderTeam();
   const atEl=document.getElementById('active-tasks-list');if(!atEl)return;
   const active=state.tasks.filter(t=>t.status!=='done'&&!isScheduled(t));
-  if(active.length===0){atEl.innerHTML=`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 0;letter-spacing:1px;">No active tasks.</div>`;return;}
+  if(!active.length){atEl.innerHTML=`<div style="font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 0;letter-spacing:1px;">No active tasks.</div>`;return;}
   const priOrd={high:0,medium:1,low:2};
   const sorted=[...active].sort((a,b)=>priOrd[a.priority]-priOrd[b.priority]);
   atEl.innerHTML=sorted.map(t=>`
@@ -1268,62 +1292,50 @@ const AVATAR_COLORS=['#82c402','#cc8800','#cc3300','#00886a','#5566bb','#886600'
 function colorFor(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%AVATAR_COLORS.length;return AVATAR_COLORS[h];}
 function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 
-let prevHighCount = 0;
-
 function renderBoard(){
+  if(!dbLoaded)return;
   const tasks=state.tasks||[]; const emps=state.employees||[];
+  const visibleTasks=tasks.filter(t=>!shouldAutoHide(t));
+  const sched=visibleTasks.filter(t=>isScheduled(t)).length;
+  const active=visibleTasks.filter(t=>t.status!=='done'&&!isScheduled(t)).length;
+  const inp=visibleTasks.filter(t=>t.status==='inprogress'&&!isScheduled(t)).length;
+  const done=visibleTasks.filter(t=>t.status==='done').length;
+  const high=visibleTasks.filter(t=>t.priority==='high'&&t.status!=='done'&&!isScheduled(t)).length;
+  const total=visibleTasks.length;
+  const pct=total>0?Math.round(done/total*100):0;
 
-  // Filter out auto-hide done tasks
-  const visibleTasks = tasks.filter(t => !shouldAutoHide(t));
-
-  const sched  = visibleTasks.filter(t=>isScheduled(t)).length;
-  const active = visibleTasks.filter(t=>t.status!=='done'&&!isScheduled(t)).length;
-  const inp    = visibleTasks.filter(t=>t.status==='inprogress'&&!isScheduled(t)).length;
-  const done   = visibleTasks.filter(t=>t.status==='done').length;
-  const high   = visibleTasks.filter(t=>t.priority==='high'&&t.status!=='done'&&!isScheduled(t)).length;
-  const total  = visibleTasks.length;
-  const pct    = total>0?Math.round(done/total*100):0;
-
-  document.getElementById('s-total').textContent  = total;
-  document.getElementById('s-active').textContent = active;
-  document.getElementById('s-inp').textContent    = inp;
-  document.getElementById('s-done').textContent   = done;
-  document.getElementById('s-sched').textContent  = sched;
-  document.getElementById('s-high').textContent   = high;
-  document.getElementById('s-pct').textContent    = pct+'%';
-  document.getElementById('comp-bar').style.width = pct+'%';
-
-  document.getElementById('urgent').classList.toggle('hidden', high===0);
-
-  // Sound alert if new high priority tasks appeared
-  if(high > prevHighCount) playSound('high');
-  prevHighCount = high;
-
-  document.getElementById('footer-ts').textContent =
-    'Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-active').textContent=active;
+  document.getElementById('s-inp').textContent=inp;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-sched').textContent=sched;
+  document.getElementById('s-high').textContent=high;
+  document.getElementById('s-pct').textContent=pct+'%';
+  document.getElementById('comp-bar').style.width=pct+'%';
+  document.getElementById('urgent').classList.toggle('hidden',high===0);
+  if(high>prevHighCount) playSound('high');
+  prevHighCount=high;
+  document.getElementById('footer-ts').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
   const board=document.getElementById('board-inner');
   const priOrd={high:0,medium:1,low:2};
   const stOrd={inprogress:0,todo:1,scheduled:2,done:3};
   const stLbl={todo:'To Do',inprogress:'In Progress',done:'Done',scheduled:'Scheduled'};
   const stCls={todo:'tag-todo',inprogress:'tag-inp',done:'tag-done',scheduled:'tag-scheduled'};
-
   const empHasTasks=emps.filter(e=>visibleTasks.some(t=>(t.assignees||[]).includes(e)));
   const allAssignees=[...new Set(visibleTasks.flatMap(t=>t.assignees||[]))];
   const orphaned=allAssignees.filter(a=>!emps.includes(a));
   const display=[...empHasTasks,...orphaned];
 
-  if(visibleTasks.length===0){
+  if(!visibleTasks.length){
     board.innerHTML=`<div class="empty"><div class="empty-icon">📋</div><h2>No Active Tasks</h2><p>Press ⚙ Manager and enter your PIN to assign tasks.</p></div>`;
     return;
   }
 
-  // Completion rate per employee (for display)
   function empRate(emp){
     const et=visibleTasks.filter(t=>(t.assignees||[]).includes(emp));
-    if(!et.length) return null;
-    const d=et.filter(t=>t.status==='done').length;
-    return Math.round(d/et.length*100)+'%';
+    if(!et.length)return null;
+    return Math.round(et.filter(t=>t.status==='done').length/et.length*100)+'%';
   }
 
   board.innerHTML=display.map((emp,ei)=>{
@@ -1338,10 +1350,8 @@ function renderBoard(){
     <div class="emp-block" style="animation-delay:${ei*0.04}s;">
       <div class="emp-hdr">
         <div class="emp-av" style="background:${col};">${initials(emp)}</div>
-        <div>
-          <div class="emp-nm">${emp}</div>
-          <div class="emp-meta">${empTasks.length} task${empTasks.length!==1?'s':''} · <span style="color:var(--green);font-weight:700;">${activeCount} active</span></div>
-        </div>
+        <div><div class="emp-nm">${emp}</div>
+        <div class="emp-meta">${empTasks.length} task${empTasks.length!==1?'s':''} · <span style="color:var(--green);font-weight:700;">${activeCount} active</span></div></div>
         <div class="emp-right">
           ${rate?`<div class="emp-rate">${rate} done</div>`:''}
           ${allDone?`<div class="emp-clear">✓ All Clear</div>`:''}
@@ -1352,13 +1362,12 @@ function renderBoard(){
           const ds=displayStatus(t);
           const others=(t.assignees||[]).filter(a=>a!==emp);
           const timer=ds==='inprogress'&&t.startedAt?`<div class="tc-timer">⏱ ${elapsedTime(t.startedAt)}</div>`:'';
-          return `
-          <div class="tc pri-${t.priority} st-${ds}" style="animation-delay:${ei*0.04+ti*0.03}s;">
+          return `<div class="tc pri-${t.priority} st-${ds}" style="animation-delay:${ei*0.04+ti*0.03}s;">
             <div class="tc-top">
               <div class="tc-title">${t.title}</div>
               ${ds==='inprogress'?'<span class="dot-pulse"></span>':''}
-              ${ds==='done'?`<span style="color:var(--green);font-size:13px;">✓</span>`:''}
-              ${ds==='scheduled'?`<span>📅</span>`:''}
+              ${ds==='done'?'<span style="color:var(--green);font-size:13px;">✓</span>':''}
+              ${ds==='scheduled'?'<span>📅</span>':''}
             </div>
             ${timer}
             ${t.schedDate?`<div class="tc-date">📅 ${formatDate(t.schedDate)}</div>`:''}
@@ -1370,7 +1379,7 @@ function renderBoard(){
             </div>
             <div class="tc-actions">
               ${ds!=='done'
-                ?`<button class="ta-btn done-btn"   onclick="markDone('${t.id}')">✓</button>
+                ?`<button class="ta-btn done-btn" onclick="markDone('${t.id}')">✓</button>
                   <button class="ta-btn inprog-btn" onclick="markInProgress('${t.id}')">${t.status==='inprogress'?'↩':'▶'}</button>`
                 :`<button class="ta-btn" onclick="markInProgress('${t.id}')">↩</button>`}
               <button class="ta-btn edit-btn" onclick="openEditTask('${t.id}')">✎</button>
@@ -1381,6 +1390,8 @@ function renderBoard(){
       </div>
     </div>`;
   }).join('');
+
+  checkAllClear();
 }
 
 /* ═══════════════════════════════════════════════
@@ -1390,52 +1401,53 @@ function scaleBoard(){
   const scaler=document.getElementById('board-scaler');
   const board=document.getElementById('board-inner');
   if(!scaler||!board)return;
-
-  const hdrH   =(document.querySelector('.hdr')?.offsetHeight)||0;
-  const statsH =(document.querySelector('.stats-bar')?.offsetHeight)||0;
-  const compH  =(document.querySelector('.completion-bar-wrap')?.offsetHeight)||0;
-  const urgent =document.getElementById('urgent');
+  const hdrH=(document.querySelector('.hdr')?.offsetHeight)||0;
+  const statsH=(document.querySelector('.stats-bar')?.offsetHeight)||0;
+  const compH=(document.querySelector('.completion-bar-wrap')?.offsetHeight)||0;
+  const urgent=document.getElementById('urgent');
   const urgentH=(urgent&&!urgent.classList.contains('hidden'))?(urgent.offsetHeight+5):0;
   const footerH=(document.querySelector('.footer')?.offsetHeight)||0;
-
   const availH=window.innerHeight-hdrH-statsH-compH-urgentH-footerH;
   const availW=window.innerWidth;
-
   const tasks=state.tasks||[]; const emps=state.employees||[];
   const count=Math.max(emps.filter(e=>tasks.some(t=>(t.assignees||[]).includes(e))).length,1);
-
   let cols=1;
-  if(count>=2)  cols=2;
-  if(count>=5)  cols=3;
-  if(count>=8)  cols=4;
-  if(count>=12) cols=5;
-  if(count>=16) cols=6;
+  if(count>=2) cols=2; if(count>=5) cols=3;
+  if(count>=8) cols=4; if(count>=12) cols=5; if(count>=16) cols=6;
   board.style.columns=cols;
-
-  scaler.style.transform='';
-  scaler.style.width='';
-
+  scaler.style.transform='';scaler.style.width='';
   const naturalH=scaler.scrollHeight;
   const scale=Math.min(availH/naturalH,1);
-
   scaler.style.transform=`scale(${scale})`;
   scaler.style.transformOrigin='top left';
   scaler.style.width=(availW/scale)+'px';
 }
 
 /* ═══════════════════════════════════════════════
+   EXPOSE GLOBALS (needed for onclick= in HTML)
+═══════════════════════════════════════════════ */
+Object.assign(window,{
+  openPinModal,closePinModal,checkPin,onPinInput,focusPinInput,
+  openManager,closeManager,changePin,
+  switchTab,addEmp,removeEmp,
+  toggleSelEmp,toggleEditEmp,bulkAssignAll,
+  saveTemplate,applyTemplate,deleteTemplate,
+  addTask,markDone,markInProgress,deleteTask,
+  openEditTask,closeEditTask,saveEditTask,
+  clearCompleted,clearAllTasks,setPri,
+  setShiftNote,clearShiftNote,
+  enableWeather,disableWeather,
+  saveResetTime,clearResetTime,saveAutoHide,
+  generateExport,copyExport,renderHistory,renderPanel,
+});
+
+/* ═══════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════ */
-loadState();
 tick();
-renderBoard();
-scaleBoard();
-updateShiftNote();
-if(state.weatherEnabled) fetchWeather();
-
+startListener();
 setInterval(tick,1000);
 setInterval(()=>{if(!mgrOpen){renderBoard();scaleBoard();}},5000);
-// Refresh timer display every minute for in-progress tasks
 setInterval(()=>{if(!mgrOpen&&state.tasks.some(t=>t.status==='inprogress')){renderBoard();scaleBoard();}},60000);
 window.addEventListener('resize',scaleBoard);
 </script>
