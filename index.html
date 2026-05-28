@@ -1085,13 +1085,16 @@ function addTask(){
   const title=document.getElementById('f-title').value.trim();
   if(!title){alert('Enter a task title.');return;}
   const status=document.getElementById('f-status').value;
-  state.tasks.push({
-    id:Date.now().toString(), assignees:[...selEmps], title,
-    notes:document.getElementById('f-notes').value.trim(),
-    priority:curPri, status,
-    schedDate:document.getElementById('f-date').value||'',
-    createdAt:new Date().toISOString(), completedAt:null,
-    startedAt:status==='inprogress'?new Date().toISOString():null
+  const notes=document.getElementById('f-notes').value.trim();
+  const schedDate=document.getElementById('f-date').value||'';
+  const startedAt=status==='inprogress'?new Date().toISOString():null;
+  // Create one individual task per employee
+  selEmps.forEach((emp, i) => {
+    state.tasks.push({
+      id:(Date.now()+i).toString(), assignees:[emp], title,
+      notes, priority:curPri, status, schedDate,
+      createdAt:new Date().toISOString(), completedAt:null, startedAt
+    });
   });
   document.getElementById('f-title').value='';
   document.getElementById('f-notes').value='';
@@ -1421,8 +1424,17 @@ function renderBoard(){
   // Clamp index
   if(spIndex >= spQueue.length) spIndex = 0;
 
-  renderSpotlightSlide(spIndex, false);
-  startSpotlight();
+  // Only restart the timer if the queue changed — prevents Firebase
+  // listener from resetting the countdown every few seconds
+  const newQueueKey = spQueue.join(',');
+  if(newQueueKey !== window._lastQueueKey) {
+    window._lastQueueKey = newQueueKey;
+    renderSpotlightSlide(spIndex, false);
+    startSpotlight();
+  } else {
+    // Queue unchanged — just refresh the current slide content in place
+    renderSpotlightSlide(spIndex, false);
+  }
   checkAllClear();
 }
 
@@ -1472,7 +1484,7 @@ function renderSpotlightSlide(idx, animate){
           ${t.startedAt&&t.status==='inprogress'?`<div class="sp-tc-timer">⏱ ${elapsedTime(t.startedAt)}</div>`:''}
           ${t.schedDate?`<div class="sp-tc-date">📅 ${formatDate(t.schedDate)}</div>`:''}
           ${t.notes?`<div class="sp-tc-notes">${t.notes}</div>`:''}
-          ${others.length>0?`<div class="sp-tc-also">Also: ${others.join(', ')}</div>`:''}
+
           <div class="sp-tc-tags">
             <span class="tag tag-${t.priority}">${t.priority}</span>
             <span class="tag ${stCls[t.status]||'tag-todo'}">${stLbl[t.status]||t.status}</span>
@@ -1497,7 +1509,7 @@ function renderSpotlightSlide(idx, animate){
 function startSpotlight(){
   stopSpotlight();
   if(spQueue.length <= 1){
-    // Only one person — no rotation needed, just show them
+    renderSpotlightSlide(0, false);
     resetProgressBar(false);
     return;
   }
