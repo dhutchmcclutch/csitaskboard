@@ -51,7 +51,7 @@ body::after {
 .hdr {
   background: linear-gradient(180deg, #2a2a2a 0%, #1c1c1c 100%);
   border-bottom: 2px solid var(--green);
-  padding: 14px 28px;
+  padding: 10px 28px;
   display: flex; align-items: center; justify-content: space-between;
   flex-shrink: 0; z-index: 20;
   box-shadow: 0 2px 12px rgba(0,0,0,0.6);
@@ -59,7 +59,7 @@ body::after {
 
 .hdr-brand { display: flex; flex-direction: column; gap: 0; }
 .brand-sup { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 4px; color: var(--green); text-transform: uppercase; }
-.brand-title { font-family: var(--cond); font-size: 36px; font-weight: 700; letter-spacing: 1px; line-height: 1; color: var(--text2); }
+.brand-title { font-family: var(--cond); font-size: 32px; font-weight: 700; letter-spacing: 1px; line-height: 1; color: var(--text2); }
 
 /* Shift note display in header */
 .hdr-note {
@@ -75,8 +75,8 @@ body::after {
 
 .hdr-right { display: flex; align-items: center; gap: 14px; }
 
-.clock-time { font-family: var(--mono); font-size: 34px; font-weight: 700; letter-spacing: 2px; color: var(--green); text-align: right; }
-.clock-date { font-family: var(--mono); font-size: 14px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; text-align: right; margin-top: 4px; }
+.clock-time { font-family: var(--mono); font-size: 30px; font-weight: 700; letter-spacing: 2px; color: var(--green); text-align: right; }
+.clock-date { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; text-align: right; margin-top: 2px; }
 
 /* Weather widget */
 .weather-widget {
@@ -102,10 +102,10 @@ body::after {
   border-bottom: 1px solid var(--bdr2);
   background: var(--surf); flex-shrink: 0;
 }
-.sc { padding: 12px 14px; border-right: 1px solid var(--bdr); text-align: center; }
+.sc { padding: 8px 14px; border-right: 1px solid var(--bdr); text-align: center; }
 .sc:last-child { border-right: none; }
-.sc-lbl { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
-.sc-val { font-family: var(--mono); font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text2); }
+.sc-lbl { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
+.sc-val { font-family: var(--mono); font-size: 28px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text2); }
 .sc-val.green  { color: var(--green); }
 .sc-val.amber  { color: var(--amber2); }
 .sc-val.red    { color: var(--red2); }
@@ -117,10 +117,10 @@ body::after {
 
 /* ── URGENT ── */
 .urgent {
-  flex-shrink: 0; margin: 5px 18px 0;
+  flex-shrink: 0; margin: 4px 18px 0;
   background: rgba(204,51,0,0.12); border: 1px solid rgba(204,51,0,0.5);
-  border-left: 4px solid var(--red2); border-radius: 3px; padding: 5px 12px;
-  font-family: var(--mono); font-size: 16px; font-weight: 700;
+  border-left: 4px solid var(--red2); border-radius: 3px; padding: 4px 12px;
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
   letter-spacing: 2px; color: var(--red2); text-transform: uppercase;
   animation: urgentPulse 2s ease-in-out infinite;
 }
@@ -128,7 +128,7 @@ body::after {
 .urgent.hidden { display: none; }
 
 /* ── BOARD — SPOTLIGHT MODE ── */
-.board { flex: 1; overflow: hidden; position: relative; }
+.board { flex: 1; overflow: hidden; position: relative; min-height: 0; }
 
 #spotlight {
   position: absolute; inset: 0;
@@ -139,10 +139,11 @@ body::after {
 .spotlight-slide {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 28px 72px 12px;
+  padding: 12px 48px 8px;
   opacity: 0; transform: translateX(80px);
   transition: opacity 0.45s ease, transform 0.45s ease;
   pointer-events: none; text-align: center;
+  min-height: 0;
 }
 .spotlight-slide.active {
   opacity: 1; transform: translateX(0); pointer-events: auto;
@@ -152,32 +153,33 @@ body::after {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 28px 72px 12px; text-align: center;
+  padding: 12px 48px 8px; text-align: center;
 }
 
-/* Employee header — centered, very large */
+/* Employee header — centered */
 .sp-emp-hdr {
   display: flex; flex-direction: column; align-items: center;
-  gap: 10px; margin-bottom: 36px; width: 100%;
+  gap: 4px; margin-bottom: 14px; width: 100%;
+  flex-shrink: 0;
 }
 
 .sp-av {
-  width: 130px; height: 130px; border-radius: 18px;
+  width: 80px; height: 80px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--cond); font-weight: 900; font-size: 54px;
+  font-family: var(--cond); font-weight: 900; font-size: 34px;
   color: #000; flex-shrink: 0;
   box-shadow: 0 6px 28px rgba(0,0,0,0.5);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .sp-emp-name {
-  font-family: var(--cond); font-size: 110px; font-weight: 700;
+  font-family: var(--cond); font-size: 72px; font-weight: 700;
   letter-spacing: 3px; color: var(--text2); line-height: 1;
   text-transform: uppercase;
 }
 .sp-emp-meta {
-  font-family: var(--mono); font-size: 22px; color: var(--muted2);
-  letter-spacing: 2px; margin-top: 4px;
+  font-family: var(--mono); font-size: 18px; color: var(--muted2);
+  letter-spacing: 2px; margin-top: 2px;
 }
 .sp-emp-right { display: none; }
 .sp-emp-rate  { font-family: var(--mono); font-size: 16px; color: var(--muted2); }
@@ -187,20 +189,33 @@ body::after {
   text-shadow: 0 0 20px rgba(130,196,2,0.5);
 }
 
-/* Task grid — centered */
+/* Task grid — dynamic columns via CSS var */
 .sp-task-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 28px;
+  grid-template-columns: repeat(var(--sp-cols, 2), 1fr);
+  gap: 20px;
   width: 100%;
   flex: 1;
   align-content: center;
+  min-height: 0;
+}
+
+/* Single task: center it with max-width */
+.sp-task-grid.single-task {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Two tasks: reasonable width */
+.sp-task-grid.two-tasks {
+  max-width: 1100px;
+  margin: 0 auto;
 }
 
 .sp-tc {
   background: var(--surf2); border: 1px solid var(--bdr);
-  border-top: 8px solid var(--bdr2);
-  border-radius: 12px; padding: 32px 36px;
+  border-top: 6px solid var(--bdr2);
+  border-radius: 10px; padding: 24px 28px;
   text-align: left;
   animation: fadeUp 0.4s ease backwards;
 }
@@ -211,18 +226,24 @@ body::after {
 .sp-tc.pri-low    { border-top-color: var(--green); }
 .sp-tc.st-inprogress { background: rgba(130,196,2,0.06); border-color: rgba(130,196,2,0.35); }
 
+/* Title scales with number of tasks */
 .sp-tc-title {
-  font-family: var(--cond); font-size: 48px; font-weight: 600;
-  line-height: 1.1; color: var(--text2); margin-bottom: 14px;
+  font-family: var(--cond); font-size: clamp(28px, 3.5vw, 52px); font-weight: 600;
+  line-height: 1.1; color: var(--text2); margin-bottom: 12px;
 }
-.sp-tc-notes  { font-family: var(--mono); font-size: 20px; color: var(--muted2); line-height: 1.5; margin-bottom: 14px; }
-.sp-tc-timer  { font-family: var(--mono); font-size: 20px; color: var(--amber2); font-weight: 700; margin-bottom: 12px; }
-.sp-tc-date   { font-family: var(--mono); font-size: 19px; color: var(--amber2); margin-bottom: 12px; }
-.sp-tc-also   { font-family: var(--mono); font-size: 17px; color: var(--muted2); margin-bottom: 12px; }
+/* Single task gets bigger title */
+.single-task .sp-tc-title {
+  font-size: clamp(36px, 5vw, 72px);
+}
+
+.sp-tc-notes  { font-family: var(--mono); font-size: 18px; color: var(--muted2); line-height: 1.5; margin-bottom: 12px; }
+.sp-tc-timer  { font-family: var(--mono); font-size: 18px; color: var(--amber2); font-weight: 700; margin-bottom: 10px; }
+.sp-tc-date   { font-family: var(--mono); font-size: 17px; color: var(--amber2); margin-bottom: 10px; }
+.sp-tc-also   { font-family: var(--mono); font-size: 15px; color: var(--muted2); margin-bottom: 10px; }
 
 .sp-tc-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
-.tag { font-family: var(--mono); font-size: 16px; font-weight: 700; letter-spacing: 0.5px; padding: 7px 18px; border-radius: 4px; text-transform: uppercase; }
+.tag { font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; padding: 6px 14px; border-radius: 4px; text-transform: uppercase; }
 .tag-low       { background:rgba(130,196,2,0.12); color:#a2d422; border:1px solid rgba(130,196,2,0.3); }
 .tag-medium    { background:rgba(204,136,0,0.12); color:#ffaa00; border:1px solid rgba(204,136,0,0.3); }
 .tag-high      { background:rgba(204,51,0,0.12);  color:#e84422; border:1px solid rgba(204,51,0,0.3); }
@@ -231,7 +252,7 @@ body::after {
 .tag-done      { background:rgba(130,196,2,0.08); color:#82c402; border:1px solid rgba(130,196,2,0.2); }
 .tag-scheduled { background:rgba(204,136,0,0.1);  color:#ffaa00; border:1px solid rgba(204,136,0,0.3); }
 
-.sp-tc-actions { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--bdr); gap: 8px; }
+.sp-tc-actions { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bdr); gap: 8px; }
 .mgr-open .sp-tc-actions { display: flex; }
 
 .ta-btn { flex:1; padding:8px 10px; border-radius:4px; font-family:var(--mono); font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--bdr2); background:var(--surf3); color:var(--muted); transition:all 0.12s; text-align:center; }
@@ -244,13 +265,13 @@ body::after {
 /* Progress dots */
 .sp-dots {
   flex-shrink: 0; display: flex; justify-content: center;
-  align-items: center; gap: 12px; padding: 8px 0;
+  align-items: center; gap: 12px; padding: 6px 0;
 }
-.sp-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--bdr2); transition: all 0.3s ease; }
+.sp-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bdr2); transition: all 0.3s ease; }
 .sp-dot.active { background: var(--green); transform: scale(1.5); box-shadow: 0 0 14px rgba(130,196,2,0.6); }
 
 /* Progress bar */
-.sp-progress { flex-shrink: 0; height: 6px; background: var(--bdr); overflow: hidden; }
+.sp-progress { flex-shrink: 0; height: 5px; background: var(--bdr); overflow: hidden; }
 .sp-progress-fill { height: 100%; background: var(--green); transition: width linear; }
 
 /* No tasks */
@@ -264,16 +285,16 @@ body::after {
 
 /* ── FOOTER ── */
 .footer {
-  flex-shrink:0; height:44px;
+  flex-shrink:0; height:40px;
   background:linear-gradient(180deg,#1c1c1c 0%,#141414 100%);
   border-top:1px solid var(--bdr2);
   display:flex; align-items:center; justify-content:space-between;
   padding:0 18px; z-index:20;
 }
-.footer-live { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+.footer-live { display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:13px; font-weight:600; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
 .live-dot { width:9px; height:9px; background:var(--green); border-radius:50%; animation:blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-.footer-ts { font-family:var(--mono); font-size:14px; color:var(--muted); letter-spacing:1px; }
+.footer-ts { font-family:var(--mono); font-size:13px; color:var(--muted); letter-spacing:1px; }
 
 /* ── EMPTY ── */
 .empty { text-align:center; padding:60px 20px; color:var(--muted); }
@@ -480,7 +501,7 @@ body::after {
 
 <div class="board">
   <div id="spotlight">
-    <div id="sp-slide-container" style="flex:1;position:relative;overflow:hidden;"></div>
+    <div id="sp-slide-container" style="flex:1;position:relative;overflow:hidden;min-height:0;"></div>
     <div class="sp-progress"><div class="sp-progress-fill" id="sp-progress-fill" style="width:100%;"></div></div>
     <div class="sp-dots" id="sp-dots"></div>
   </div>
@@ -1360,13 +1381,21 @@ const SPOTLIGHT_SECS = 10;
 let spIndex = 0;
 let spTimer = null;
 let spProgressTimer = null;
-let spQueue = []; // list of employees with active tasks
+let spQueue = [];
+
+/* Determine how many columns to use based on task count */
+function getColCount(taskCount) {
+  if (taskCount <= 1) return 1;
+  if (taskCount === 2) return 2;
+  if (taskCount <= 4) return 2;
+  if (taskCount <= 6) return 3;
+  return 4;
+}
 
 function renderBoard(){
   if(!dbLoaded)return;
   const tasks=state.tasks||[]; const emps=state.employees||[];
 
-  // Only show active (todo + inprogress, not scheduled, not done)
   const activeTasks = tasks.filter(t => t.status!=='done' && !isScheduled(t));
 
   const sched  = tasks.filter(t=>isScheduled(t)).length;
@@ -1393,13 +1422,11 @@ function renderBoard(){
   document.getElementById('footer-ts').textContent =
     'Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
-  // Build spotlight queue: employees who have active tasks
   const empHasTasks = emps.filter(e => activeTasks.some(t=>(t.assignees||[]).includes(e)));
   const allAssignees = [...new Set(activeTasks.flatMap(t=>t.assignees||[]))];
   const orphaned = allAssignees.filter(a=>!emps.includes(a));
   spQueue = [...empHasTasks, ...orphaned];
 
-  // Rebuild dots
   const dotsEl = document.getElementById('sp-dots');
   if(dotsEl){
     dotsEl.innerHTML = spQueue.map((_,i)=>
@@ -1421,18 +1448,14 @@ function renderBoard(){
     return;
   }
 
-  // Clamp index
   if(spIndex >= spQueue.length) spIndex = 0;
 
-  // Only restart the timer if the queue changed — prevents Firebase
-  // listener from resetting the countdown every few seconds
   const newQueueKey = spQueue.join(',');
   if(newQueueKey !== window._lastQueueKey) {
     window._lastQueueKey = newQueueKey;
     renderSpotlightSlide(spIndex, false);
     startSpotlight();
   } else {
-    // Queue unchanged — just refresh the current slide content in place
     renderSpotlightSlide(spIndex, false);
   }
   checkAllClear();
@@ -1460,6 +1483,10 @@ function renderSpotlightSlide(idx, animate){
 
   const sortedTasks = [...empTasks].sort((a,b)=>priOrd[a.priority]-priOrd[b.priority]);
 
+  // Determine column layout
+  const cols = getColCount(sortedTasks.length);
+  const gridClass = cols === 1 ? 'single-task' : cols === 2 ? 'two-tasks' : '';
+
   const html = `
   <div class="spotlight-slide${animate?' ':''}active" id="sp-slide-current">
     <div class="sp-emp-hdr">
@@ -1468,14 +1495,9 @@ function renderSpotlightSlide(idx, animate){
         <div class="sp-emp-name">${emp}</div>
         <div class="sp-emp-meta">${empTasks.length} active task${empTasks.length!==1?'s':''}</div>
       </div>
-      <div class="sp-emp-right">
-        ${rate?`<div class="sp-emp-rate">${rate} complete today</div>`:''}
-        ${allDone?`<div class="sp-emp-clear">✓ ALL CLEAR</div>`:''}
-      </div>
     </div>
-    <div class="sp-task-grid">
+    <div class="sp-task-grid ${gridClass}" style="--sp-cols:${cols};">
       ${sortedTasks.map((t,ti)=>{
-        const others=(t.assignees||[]).filter(a=>a!==emp);
         return `<div class="sp-tc pri-${t.priority} st-${t.status}" style="animation-delay:${ti*0.08}s;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
             <div class="sp-tc-title">${t.title}</div>
@@ -1484,7 +1506,6 @@ function renderSpotlightSlide(idx, animate){
           ${t.startedAt&&t.status==='inprogress'?`<div class="sp-tc-timer">⏱ ${elapsedTime(t.startedAt)}</div>`:''}
           ${t.schedDate?`<div class="sp-tc-date">📅 ${formatDate(t.schedDate)}</div>`:''}
           ${t.notes?`<div class="sp-tc-notes">${t.notes}</div>`:''}
-
           <div class="sp-tc-tags">
             <span class="tag tag-${t.priority}">${t.priority}</span>
             <span class="tag ${stCls[t.status]||'tag-todo'}">${stLbl[t.status]||t.status}</span>
@@ -1502,7 +1523,6 @@ function renderSpotlightSlide(idx, animate){
 
   container.innerHTML = html;
 
-  // Update dots
   document.querySelectorAll('.sp-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
 }
 
@@ -1529,7 +1549,6 @@ function advanceSpotlight(){
   const container = document.getElementById('sp-slide-container');
   const current   = document.getElementById('sp-slide-current');
 
-  // Animate out current
   if(current){
     current.classList.remove('active');
     current.classList.add('exit');
@@ -1545,11 +1564,9 @@ function resetProgressBar(animate){
   const fill = document.getElementById('sp-progress-fill');
   if(!fill) return;
   if(spProgressTimer){ clearInterval(spProgressTimer); spProgressTimer=null; }
-  // Reset to full instantly
   fill.style.transition = 'none';
   fill.style.width = '100%';
   if(!animate) return;
-  // Then animate down to 0 over SPOTLIGHT_SECS
   requestAnimationFrame(()=>{
     requestAnimationFrame(()=>{
       fill.style.transition = `width ${SPOTLIGHT_SECS}s linear`;
@@ -1558,13 +1575,10 @@ function resetProgressBar(animate){
   });
 }
 
-/* ═══════════════════════════════════════════════
-   SCALE BOARD — no-op in spotlight mode
-═══════════════════════════════════════════════ */
 function scaleBoard(){ /* spotlight fills viewport naturally */ }
 
 /* ═══════════════════════════════════════════════
-   EXPOSE GLOBALS (needed for onclick= in HTML)
+   EXPOSE GLOBALS
 ═══════════════════════════════════════════════ */
 Object.assign(window,{
   openPinModal,closePinModal,checkPin,onPinInput,focusPinInput,
