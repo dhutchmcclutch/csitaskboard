@@ -127,7 +127,7 @@ body::after {
 @keyframes urgentPulse { 0%,100%{opacity:1;} 50%{opacity:0.7;} }
 .urgent.hidden { display: none; }
 
-/* ── BOARD — SPOTLIGHT MODE ── */
+/* ── BOARD — ALL-EMPLOYEE GRID ── */
 .board { flex: 1; overflow: hidden; position: relative; min-height: 0; }
 
 #spotlight {
@@ -135,113 +135,145 @@ body::after {
   display: flex; flex-direction: column;
 }
 
-/* Slide — centered, fills full height */
-.spotlight-slide {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 12px 48px 8px;
-  opacity: 0; transform: translateX(80px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
-  pointer-events: none; text-align: center;
-  min-height: 0;
-}
-.spotlight-slide.active {
-  opacity: 1; transform: translateX(0); pointer-events: auto;
-}
-.spotlight-slide.exit {
-  opacity: 0; transform: translateX(-80px);
+/* ═══════════════════════════════════════════════
+   EMPLOYEE GRID — all employees visible at once
+═══════════════════════════════════════════════ */
+.emp-board {
   position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 12px 48px 8px; text-align: center;
+  display: grid;
+  grid-auto-rows: auto;
+  align-content: start;
+  gap: 14px;
+  padding: 14px 18px;
+  overflow-y: auto;
 }
 
-/* Employee header — centered */
-.sp-emp-hdr {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 4px; margin-bottom: 14px; width: 100%;
+/* ── EMPLOYEE CARD ── */
+.emp-card {
+  background: var(--surf2); border: 1px solid var(--bdr);
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column;
+  animation: fadeUp 0.35s ease backwards;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* High priority card — aggressive red glow that pulses */
+.emp-card.has-high {
+  border-color: var(--red2);
+  box-shadow: 0 0 0 1px var(--red2), 0 0 18px rgba(232,68,34,0.35);
+  animation: fadeUp 0.35s ease backwards, highPulse 2.4s ease-in-out infinite;
+}
+@keyframes highPulse {
+  0%,100% { box-shadow: 0 0 0 1px var(--red2), 0 0 18px rgba(232,68,34,0.35); }
+  50%     { box-shadow: 0 0 0 1px var(--red2), 0 0 32px rgba(232,68,34,0.65); }
+}
+
+.emp-card-hdr {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px; flex-shrink: 0;
+  border-bottom: 1px solid var(--bdr); padding-bottom: 10px;
+}
+.emp-card-av {
+  width: 46px; height: 46px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--cond); font-weight: 900; font-size: 19px;
+  color: #000;
+}
+.emp-card-name {
+  font-family: var(--cond); font-size: 28px; font-weight: 700;
+  letter-spacing: 1.5px; color: var(--text2); text-transform: uppercase;
+  line-height: 1; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.emp-card-count {
+  font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted2);
+  flex-shrink: 0; background: var(--surf3); border-radius: 12px;
+  padding: 4px 11px; letter-spacing: 0.5px; border: 1px solid var(--bdr2);
+}
+/* Red count badge when any high-priority */
+.emp-card.has-high .emp-card-count {
+  color: var(--red2); border-color: rgba(232,68,34,0.5);
+  background: rgba(204,51,0,0.12);
+}
+
+.emp-card-tasks {
+  position: relative;
+  width: 100%;
+}
+
+/* The single visible task slot — natural height */
+.ec-task-slot {
+  width: 100%;
+  opacity: 1; transition: opacity 0.5s ease;
+}
+.ec-task-slot.fading { opacity: 0; }
+
+/* ── TASK CARD ── */
+.ec-task {
+  background: var(--surf3); border: 1px solid var(--bdr);
+  border-left: 6px solid var(--bdr2);
+  border-radius: 8px; padding: 16px 18px;
+  text-align: left;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ec-task.pri-high   { border-left-color: var(--red2); background: rgba(204,51,0,0.08); }
+.ec-task.pri-medium { border-left-color: var(--amber2); }
+.ec-task.pri-low    { border-left-color: var(--green); }
+.ec-task.st-inprogress { background: rgba(130,196,2,0.08); border-color: rgba(130,196,2,0.3); }
+.ec-task.pri-high.st-inprogress { background: rgba(204,51,0,0.08); border-color: rgba(232,68,34,0.45); }
+
+.ec-task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ec-task-title {
+  font-family: var(--cond); font-size: 26px; font-weight: 600;
+  color: var(--text2); line-height: 1.2; flex: 1;
+}
+.ec-task.pri-high .ec-task-title { color: #fff; }
+
+.ec-task-timer { font-family: var(--mono); font-size: 14px; color: var(--amber2); font-weight: 700; margin-top: 8px; }
+.ec-task-notes { font-family: var(--mono); font-size: 14px; color: var(--muted2); margin-top: 8px; line-height: 1.5; }
+.ec-task-tags  { display: flex; gap: 6px; margin-top: 10px; flex-wrap: nowrap; overflow: hidden; }
+.ec-tag {
+  font-family: var(--mono); font-size: clamp(11px, 1vw, 16px); font-weight: 700; letter-spacing: 0.5px;
+  padding: 4px 10px; border-radius: 3px; text-transform: uppercase;
+}
+.ec-tag.low    { background:rgba(130,196,2,0.12); color:#a2d422; border:1px solid rgba(130,196,2,0.3); }
+.ec-tag.medium { background:rgba(204,136,0,0.12); color:#ffaa00; border:1px solid rgba(204,136,0,0.3); }
+.ec-tag.high   { background:rgba(204,51,0,0.2);   color:#ff6644; border:1px solid rgba(232,68,34,0.5); font-weight:900; }
+.ec-tag.todo   { background:rgba(136,136,136,0.1);color:#aaaaaa; border:1px solid rgba(136,136,136,0.25); }
+.ec-tag.inp    { background:rgba(130,196,2,0.1);  color:#a2d422; border:1px solid rgba(130,196,2,0.3); }
+
+.ec-task-actions { display: none; gap: 5px; margin-top: 8px; flex-shrink: 0; }
+.mgr-open .ec-task-actions { display: flex; }
+.ec-btn {
+  flex: 1; padding: 5px 6px; border-radius: 4px; font-family: var(--mono);
+  font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid var(--bdr2);
+  background: var(--surf2); color: var(--muted); transition: all 0.12s; text-align: center;
+}
+.ec-btn:hover { color: var(--text2); }
+.ec-btn.done:hover  { border-color: var(--green);  color: var(--green);  background: rgba(130,196,2,0.1); }
+.ec-btn.start:hover { border-color: var(--amber2); color: var(--amber2); background: rgba(204,136,0,0.1); }
+.ec-btn.del:hover   { border-color: var(--red2);   color: var(--red2);   background: rgba(204,51,0,0.1); }
+
+/* Dot indicator row — shown only when >1 task */
+.ec-dots {
+  display: flex; justify-content: center; align-items: center;
+  gap: 7px; padding: 6px 0 2px; flex-shrink: 0;
+}
+.ec-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--bdr2); transition: background 0.3s ease, transform 0.3s ease;
   flex-shrink: 0;
 }
+.ec-dot.active { background: var(--green); transform: scale(1.4); }
 
-.sp-av {
-  width: 80px; height: 80px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--cond); font-weight: 900; font-size: 34px;
-  color: #000; flex-shrink: 0;
-  box-shadow: 0 6px 28px rgba(0,0,0,0.5);
-  margin-bottom: 4px;
+/* Progress bar inside card — drains over rotation interval */
+.ec-progress {
+  height: 3px; background: var(--bdr); border-radius: 0 0 8px 8px;
+  flex-shrink: 0; overflow: hidden; margin-top: 4px;
 }
-
-.sp-emp-name {
-  font-family: var(--cond); font-size: 72px; font-weight: 700;
-  letter-spacing: 3px; color: var(--text2); line-height: 1;
-  text-transform: uppercase;
+.ec-progress-fill {
+  height: 100%; background: var(--green); width: 100%;
 }
-.sp-emp-meta {
-  font-family: var(--mono); font-size: 18px; color: var(--muted2);
-  letter-spacing: 2px; margin-top: 2px;
-}
-.sp-emp-right { display: none; }
-.sp-emp-rate  { font-family: var(--mono); font-size: 16px; color: var(--muted2); }
-.sp-emp-clear {
-  font-family: var(--cond); font-size: 36px; font-weight: 700;
-  color: var(--green); letter-spacing: 3px;
-  text-shadow: 0 0 20px rgba(130,196,2,0.5);
-}
-
-/* Task grid — dynamic columns via CSS var */
-.sp-task-grid {
-  display: grid;
-  grid-template-columns: repeat(var(--sp-cols, 2), 1fr);
-  gap: 20px;
-  width: 100%;
-  flex: 1;
-  align-content: center;
-  min-height: 0;
-}
-
-/* Single task: center it with max-width */
-.sp-task-grid.single-task {
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-/* Two tasks: reasonable width */
-.sp-task-grid.two-tasks {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
-.sp-tc {
-  background: var(--surf2); border: 1px solid var(--bdr);
-  border-top: 6px solid var(--bdr2);
-  border-radius: 10px; padding: 24px 28px;
-  text-align: left;
-  animation: fadeUp 0.4s ease backwards;
-}
-@keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-
-.sp-tc.pri-high   { border-top-color: var(--red2); }
-.sp-tc.pri-medium { border-top-color: var(--amber2); }
-.sp-tc.pri-low    { border-top-color: var(--green); }
-.sp-tc.st-inprogress { background: rgba(130,196,2,0.06); border-color: rgba(130,196,2,0.35); }
-
-/* Title scales with number of tasks */
-.sp-tc-title {
-  font-family: var(--cond); font-size: clamp(28px, 3.5vw, 52px); font-weight: 600;
-  line-height: 1.1; color: var(--text2); margin-bottom: 12px;
-}
-/* Single task gets bigger title */
-.single-task .sp-tc-title {
-  font-size: clamp(36px, 5vw, 72px);
-}
-
-.sp-tc-notes  { font-family: var(--mono); font-size: 18px; color: var(--muted2); line-height: 1.5; margin-bottom: 12px; }
-.sp-tc-timer  { font-family: var(--mono); font-size: 18px; color: var(--amber2); font-weight: 700; margin-bottom: 10px; }
-.sp-tc-date   { font-family: var(--mono); font-size: 17px; color: var(--amber2); margin-bottom: 10px; }
-.sp-tc-also   { font-family: var(--mono); font-size: 15px; color: var(--muted2); margin-bottom: 10px; }
-
-.sp-tc-tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
 .tag { font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 0.5px; padding: 6px 14px; border-radius: 4px; text-transform: uppercase; }
 .tag-low       { background:rgba(130,196,2,0.12); color:#a2d422; border:1px solid rgba(130,196,2,0.3); }
@@ -252,27 +284,7 @@ body::after {
 .tag-done      { background:rgba(130,196,2,0.08); color:#82c402; border:1px solid rgba(130,196,2,0.2); }
 .tag-scheduled { background:rgba(204,136,0,0.1);  color:#ffaa00; border:1px solid rgba(204,136,0,0.3); }
 
-.sp-tc-actions { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bdr); gap: 8px; }
-.mgr-open .sp-tc-actions { display: flex; }
-
-.ta-btn { flex:1; padding:8px 10px; border-radius:4px; font-family:var(--mono); font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--bdr2); background:var(--surf3); color:var(--muted); transition:all 0.12s; text-align:center; }
-.ta-btn:hover              { color:var(--text2); }
-.ta-btn.done-btn:hover     { border-color:var(--green);  color:var(--green);  background:rgba(130,196,2,0.1); }
-.ta-btn.inprog-btn:hover   { border-color:var(--amber2); color:var(--amber2); background:rgba(204,136,0,0.1); }
-.ta-btn.del-btn:hover      { border-color:var(--red2);   color:var(--red2);   background:rgba(204,51,0,0.1); }
-.ta-btn.edit-btn:hover     { border-color:var(--muted2); color:var(--text2); }
-
-/* Progress dots */
-.sp-dots {
-  flex-shrink: 0; display: flex; justify-content: center;
-  align-items: center; gap: 12px; padding: 6px 0;
-}
-.sp-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bdr2); transition: all 0.3s ease; }
-.sp-dot.active { background: var(--green); transform: scale(1.5); box-shadow: 0 0 14px rgba(130,196,2,0.6); }
-
-/* Progress bar */
-.sp-progress { flex-shrink: 0; height: 5px; background: var(--bdr); overflow: hidden; }
-.sp-progress-fill { height: 100%; background: var(--green); transition: width linear; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
 
 /* No tasks */
 .sp-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); }
@@ -328,7 +340,8 @@ body::after {
 .pin-dot   { width:14px; height:14px; border-radius:50%; border:2px solid var(--bdr2); background:transparent; transition:all 0.15s; }
 .pin-dot.filled { background:var(--green); border-color:var(--green); }
 .pin-input { position:absolute; opacity:0; width:1px; height:1px; }
-.pin-display { width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--bdr2); border-radius:6px; padding:12px; font-family:var(--mono); font-size:20px; letter-spacing:10px; text-align:center; color:var(--text); cursor:text; margin-bottom:14px; min-height:52px; display:flex; align-items:center; justify-content:center; transition:border-color 0.15s; }
+.pin-display { width:100%; background:rgba(0,0,0,0.4); border:1px solid var(--bdr2); border-radius:6px; padding:12px; font-family:var(--mono); font-size:20px; letter-spacing:10px; text-align:center; color:var(--text); cursor:text; margin-bottom:14px; min-height:52px; display:flex; align-items:center; justify-content:center; transition:border-color 0.15s; overflow:hidden; white-space:nowrap; }
+.pin-display #pin-vis { font-size:14px; letter-spacing:2px; color:var(--muted); white-space:nowrap; }
 .pin-display.focused { border-color:var(--green-d); }
 .pin-submit { width:100%; padding:12px; background:var(--green); color:#000; border:none; border-radius:5px; font-family:var(--cond); font-size:17px; font-weight:700; letter-spacing:3px; text-transform:uppercase; cursor:pointer; margin-bottom:7px; }
 .pin-submit:hover { background:var(--green2); }
@@ -500,11 +513,7 @@ body::after {
 <div class="urgent hidden" id="urgent">⚠ HIGH PRIORITY TASKS REQUIRE ATTENTION</div>
 
 <div class="board">
-  <div id="spotlight">
-    <div id="sp-slide-container" style="flex:1;position:relative;overflow:hidden;min-height:0;"></div>
-    <div class="sp-progress"><div class="sp-progress-fill" id="sp-progress-fill" style="width:100%;"></div></div>
-    <div class="sp-dots" id="sp-dots"></div>
-  </div>
+  <div id="emp-board-container" style="position:absolute;inset:0;"></div>
 </div>
 
 <div class="footer">
@@ -1371,26 +1380,297 @@ function renderPanel(){
 }
 
 /* ═══════════════════════════════════════════════
-   SPOTLIGHT ROTATION ENGINE
+   EMPLOYEE GRID ENGINE
+   All employees with active tasks shown at once.
+   Flash-free: Firebase updates patch the live DOM
+   in place; full remount only when the employee
+   set or someone's task list actually changes.
 ═══════════════════════════════════════════════ */
 const AVATAR_COLORS=['#82c402','#cc8800','#cc3300','#00886a','#5566bb','#886600','#448822','#aa4422','#228866','#664488'];
 function colorFor(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%AVATAR_COLORS.length;return AVATAR_COLORS[h];}
 function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').toUpperCase().slice(0,2);}
 
-const SPOTLIGHT_SECS = 10;
-let spIndex = 0;
-let spTimer = null;
-let spProgressTimer = null;
-let spQueue = [];
+/* Get sorted active tasks for an employee */
+function getEmpTasks(emp, activeTasks) {
+  const priOrd = {high:0,medium:1,low:2};
+  return [...activeTasks.filter(t=>(t.assignees||[]).includes(emp))]
+    .sort((a,b)=>priOrd[a.priority]-priOrd[b.priority]);
+}
 
-/* Determine how many columns to use based on task count */
-function getColCount(taskCount) {
-  if (taskCount <= 1) return 1;
-  if (taskCount === 2) return 2;
-  if (taskCount <= 4) return 2;
-  if (taskCount <= 6) return 3;
+/* Decide grid columns based on employee count —
+   fewer people = wider cards that fill the screen better */
+function getGridCols(empCount) {
+  if (empCount <= 1) return 1;
+  if (empCount <= 2) return 2;
+  if (empCount <= 4) return 2;
+  if (empCount <= 6) return 3;
+  if (empCount <= 9) return 3;
   return 4;
 }
+
+/* Decide grid rows explicitly so cards fill screen height evenly */
+function getGridRows(empCount, cols) {
+  return Math.ceil(empCount / cols);
+}
+
+function buildTaskCardHTML(t) {
+  const stLbl = {todo:'To Do', inprogress:'In Progress'};
+  const stCls = {todo:'todo', inprogress:'inp'};
+  return `<div class="ec-task pri-${t.priority} st-${t.status}" id="ec-task-${t.id}">
+    <div class="ec-task-top">
+      <div class="ec-task-title">${t.title}</div>
+      ${t.status==='inprogress' ? '<span class="dot-pulse" style="margin-top:4px;flex-shrink:0;"></span>' : ''}
+    </div>
+    ${t.startedAt && t.status==='inprogress' ? `<div class="ec-task-timer">⏱ ${elapsedTime(t.startedAt)}</div>` : ''}
+    ${t.notes ? `<div class="ec-task-notes">${t.notes}</div>` : ''}
+    <div class="ec-task-tags">
+      <span class="ec-tag ${t.priority}">${t.priority}</span>
+      <span class="ec-tag ${stCls[t.status]||'todo'}">${stLbl[t.status]||t.status}</span>
+    </div>
+    <div class="ec-task-actions">
+      <button class="ec-btn done"  onclick="markDone('${t.id}')">✓ Done</button>
+      <button class="ec-btn start" onclick="markInProgress('${t.id}')">${t.status==='inprogress'?'↩ Todo':'▶ Start'}</button>
+      <button class="ec-btn del"   onclick="deleteTask('${t.id}')">✕</button>
+    </div>
+  </div>`;
+}
+
+function buildEmpCardHTML(emp, sortedTasks, idx) {
+  const col    = colorFor(emp);
+  const hasHigh = sortedTasks.some(t => t.priority==='high');
+  const multi   = sortedTasks.length > 1;
+  return `<div class="emp-card${hasHigh?' has-high':''}" id="emp-card-${cssSafe(emp)}" style="animation-delay:${idx*0.04}s;">
+    <div class="emp-card-hdr">
+      <div class="emp-card-av" style="background:${col};">${initials(emp)}</div>
+      <div class="emp-card-name">${emp}</div>
+      <div class="emp-card-count${hasHigh?' high':''}" id="emp-count-${cssSafe(emp)}">${sortedTasks.length}</div>
+    </div>
+    <div class="emp-card-tasks" id="emp-tasks-${cssSafe(emp)}">
+      <div class="ec-task-slot" id="ec-slot-${cssSafe(emp)}">
+        ${buildTaskCardHTML(sortedTasks[0])}
+      </div>
+    </div>
+    ${multi ? `
+    <div class="ec-dots" id="ec-dots-${cssSafe(emp)}">
+      ${sortedTasks.map((_,i) => `<div class="ec-dot${i===0?' active':''}" id="ec-dot-${cssSafe(emp)}-${i}"></div>`).join('')}
+    </div>
+    <div class="ec-progress"><div class="ec-progress-fill" id="ec-prog-${cssSafe(emp)}"></div></div>
+    ` : ''}
+  </div>`;
+}
+
+/* Employee names can contain spaces/punctuation — make a safe id fragment */
+function cssSafe(s){ return s.replace(/[^a-zA-Z0-9_-]/g,'_'); }
+
+/* ═══════════════════════════════════════════════
+   PER-CARD ROTATION ENGINE
+   Each employee card rotates its own tasks
+   independently on a 5-second timer.
+   Firebase updates patch the visible task in place
+   without resetting the rotation timer.
+═══════════════════════════════════════════════ */
+const CARD_ROTATE_SECS = 5;
+
+// Map of emp -> { idx, timer, progressTimer, tasks }
+const cardState = new Map();
+
+function startCardRotation(emp, tasks) {
+  stopCardRotation(emp);
+  if (tasks.length <= 1) return; // nothing to rotate
+
+  const state_c = { idx: 0, tasks };
+  cardState.set(emp, state_c);
+
+  startCardProgress(emp);
+
+  const timer = setInterval(() => {
+    rotateCard(emp);
+  }, CARD_ROTATE_SECS * 1000);
+
+  state_c.timer = timer;
+}
+
+function stopCardRotation(emp) {
+  const s = cardState.get(emp);
+  if (!s) return;
+  if (s.timer)         clearInterval(s.timer);
+  if (s.progressTimer) clearInterval(s.progressTimer);
+  cardState.delete(emp);
+}
+
+function stopAllCardRotations() {
+  for (const emp of cardState.keys()) stopCardRotation(emp);
+}
+
+function startCardProgress(emp) {
+  const s = cardState.get(emp);
+  if (!s) return;
+  if (s.progressTimer) clearInterval(s.progressTimer);
+
+  const fill = document.getElementById(`ec-prog-${cssSafe(emp)}`);
+  if (!fill) return;
+
+  // Reset to full instantly, then drain to 0 over CARD_ROTATE_SECS
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.transition = `width ${CARD_ROTATE_SECS}s linear`;
+    fill.style.width = '0%';
+  }));
+}
+
+function rotateCard(emp) {
+  const s = cardState.get(emp);
+  if (!s) return;
+  const slot = document.getElementById(`ec-slot-${cssSafe(emp)}`);
+  if (!slot) { stopCardRotation(emp); return; }
+
+  // Fade out
+  slot.classList.add('fading');
+
+  setTimeout(() => {
+    s.idx = (s.idx + 1) % s.tasks.length;
+    const t = s.tasks[s.idx];
+
+    // Swap content while invisible
+    slot.innerHTML = buildTaskCardHTML(t);
+    updateCardDots(emp, s.idx, s.tasks.length);
+
+    // Fade back in
+    slot.classList.remove('fading');
+    startCardProgress(emp);
+  }, 520); // slightly longer than the 0.5s CSS transition
+}
+
+function updateCardDots(emp, activeIdx, total) {
+  for (let i = 0; i < total; i++) {
+    const dot = document.getElementById(`ec-dot-${cssSafe(emp)}-${i}`);
+    if (dot) dot.classList.toggle('active', i === activeIdx);
+  }
+}
+
+/*
+ * Patch the currently-visible task card in place (no fade, no timer reset).
+ * Used by Firebase updates when only task data changed, not structure.
+ */
+function patchVisibleTask(emp, t) {
+  const slot = document.getElementById(`ec-slot-${cssSafe(emp)}`);
+  if (!slot) return false;
+  const taskEl = slot.querySelector('.ec-task');
+  if (!taskEl || taskEl.id !== `ec-task-${t.id}`) return false;
+
+  const stLbl = {todo:'To Do', inprogress:'In Progress'};
+  const stCls = {todo:'todo', inprogress:'inp'};
+
+  taskEl.className = `ec-task pri-${t.priority} st-${t.status}`;
+
+  const titleEl = taskEl.querySelector('.ec-task-title');
+  if (titleEl && titleEl.textContent !== t.title) titleEl.textContent = t.title;
+
+  // Pulse dot
+  const topRow = taskEl.querySelector('.ec-task-top');
+  if (topRow) {
+    const pulse = topRow.querySelector('.dot-pulse');
+    if (t.status === 'inprogress' && !pulse) {
+      const s2 = document.createElement('span');
+      s2.className = 'dot-pulse'; s2.style.marginTop = '4px'; s2.style.flexShrink = '0';
+      topRow.appendChild(s2);
+    } else if (t.status !== 'inprogress' && pulse) {
+      pulse.remove();
+    }
+  }
+
+  // Timer
+  let timerEl = taskEl.querySelector('.ec-task-timer');
+  if (t.startedAt && t.status === 'inprogress') {
+    if (!timerEl) {
+      timerEl = document.createElement('div');
+      timerEl.className = 'ec-task-timer';
+      const notesEl = taskEl.querySelector('.ec-task-notes');
+      const tagsEl  = taskEl.querySelector('.ec-task-tags');
+      taskEl.insertBefore(timerEl, notesEl || tagsEl);
+    }
+    timerEl.textContent = `⏱ ${elapsedTime(t.startedAt)}`;
+  } else if (timerEl) {
+    timerEl.remove();
+  }
+
+  // Tags
+  const tagsEl = taskEl.querySelector('.ec-task-tags');
+  if (tagsEl) tagsEl.innerHTML = `
+    <span class="ec-tag ${t.priority}">${t.priority}</span>
+    <span class="ec-tag ${stCls[t.status]||'todo'}">${stLbl[t.status]||t.status}</span>`;
+
+  // Start/todo button
+  const startBtn = taskEl.querySelector('.ec-btn.start');
+  if (startBtn) startBtn.textContent = t.status==='inprogress' ? '↩ Todo' : '▶ Start';
+
+  return true;
+}
+
+/*
+ * Patch the board in place when only task data changed.
+ * Updates the visible task on each card, the count badge,
+ * and high-priority styling — without tearing down cards
+ * or resetting rotation timers.
+ * Returns false if a full remount is needed instead.
+ */
+function patchEmpBoard(empList, tasksByEmp) {
+  const container = document.getElementById('emp-board-container');
+  if (!container || !container.querySelector('.emp-board')) return false;
+
+  for (const emp of empList) {
+    const card = document.getElementById(`emp-card-${cssSafe(emp)}`);
+    if (!card) return false;
+
+    const allTasks = tasksByEmp[emp];
+    const s = cardState.get(emp);
+
+    // Sync the rotation state's task list so it stays current
+    if (s) s.tasks = allTasks;
+
+    // Count badge
+    const countEl = document.getElementById(`emp-count-${cssSafe(emp)}`);
+    if (countEl) countEl.textContent = allTasks.length;
+
+    // High-priority card styling
+    const hasHigh = allTasks.some(t => t.priority === 'high');
+    card.classList.toggle('has-high', hasHigh);
+    const countBadge = document.getElementById(`emp-count-${cssSafe(emp)}`);
+    if (countBadge) countBadge.classList.toggle('high', hasHigh);
+
+    // Patch the currently-visible task if it's still in the list
+    const currentIdx = s ? s.idx : 0;
+    const visibleTask = allTasks[currentIdx] || allTasks[0];
+    if (visibleTask) patchVisibleTask(emp, visibleTask);
+  }
+
+  return true;
+}
+
+/* Full remount — tears down all cards and rotation timers, rebuilds from scratch */
+function mountEmpBoard(empList, tasksByEmp) {
+  stopAllCardRotations();
+
+  const container = document.getElementById('emp-board-container');
+  if (!container) return;
+
+  const cols = getGridCols(empList.length);
+  const html = `<div class="emp-board" style="grid-template-columns:repeat(${cols},1fr);">
+    ${empList.map((emp,i) => buildEmpCardHTML(emp, tasksByEmp[emp], i)).join('')}
+  </div>`;
+
+  container.innerHTML = html;
+
+  // Start rotation timers for any employee with >1 task
+  for (const emp of empList) {
+    if (tasksByEmp[emp].length > 1) {
+      startCardRotation(emp, tasksByEmp[emp]);
+    }
+  }
+}
+
+let _lastEmpKey = null;
 
 function renderBoard(){
   if(!dbLoaded)return;
@@ -1422,160 +1702,48 @@ function renderBoard(){
   document.getElementById('footer-ts').textContent =
     'Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 
+  // Build employee list: only those with active tasks, in team order, plus any orphaned assignees
   const empHasTasks = emps.filter(e => activeTasks.some(t=>(t.assignees||[]).includes(e)));
   const allAssignees = [...new Set(activeTasks.flatMap(t=>t.assignees||[]))];
   const orphaned = allAssignees.filter(a=>!emps.includes(a));
-  spQueue = [...empHasTasks, ...orphaned];
+  const empList = [...empHasTasks, ...orphaned];
 
-  const dotsEl = document.getElementById('sp-dots');
-  if(dotsEl){
-    dotsEl.innerHTML = spQueue.map((_,i)=>
-      `<div class="sp-dot ${i===spIndex%Math.max(spQueue.length,1)?'active':''}" id="sp-dot-${i}"></div>`
-    ).join('');
-  }
-
-  if(spQueue.length === 0){
-    const container = document.getElementById('sp-slide-container');
-    if(container) container.innerHTML = `
-      <div class="spotlight-slide active" style="flex:1;display:flex;flex-direction:column;">
-        <div class="sp-empty">
+  if(empList.length === 0){
+    const container = document.getElementById('emp-board-container');
+    if(_lastEmpKey !== null){
+      _lastEmpKey = null;
+      stopAllCardRotations();
+      if(container) container.innerHTML = `
+        <div class="sp-empty" style="position:absolute;inset:0;">
           <div class="empty-icon">📋</div>
           <h2>No Active Tasks</h2>
           <p>Press ⚙ Manager and enter your PIN to assign tasks.</p>
-        </div>
-      </div>`;
-    stopSpotlight();
+        </div>`;
+    }
+    checkAllClear();
     return;
   }
 
-  if(spIndex >= spQueue.length) spIndex = 0;
+  // Build task lookup per employee
+  const tasksByEmp = {};
+  for (const emp of empList) tasksByEmp[emp] = getEmpTasks(emp, activeTasks);
 
-  const newQueueKey = spQueue.join(',');
-  if(newQueueKey !== window._lastQueueKey) {
-    window._lastQueueKey = newQueueKey;
-    renderSpotlightSlide(spIndex, false);
-    startSpotlight();
+  // Key encodes employee set AND each employee's task id sequence —
+  // if anything structural changed, we remount; otherwise we patch.
+  const empKey = empList.map(e => `${e}:${tasksByEmp[e].map(t=>t.id).join('-')}`).join('|');
+
+  if(empKey !== _lastEmpKey){
+    _lastEmpKey = empKey;
+    mountEmpBoard(empList, tasksByEmp);
   } else {
-    renderSpotlightSlide(spIndex, false);
+    const patched = patchEmpBoard(empList, tasksByEmp);
+    if(!patched) mountEmpBoard(empList, tasksByEmp);
   }
+
   checkAllClear();
 }
 
-function renderSpotlightSlide(idx, animate){
-  const container = document.getElementById('sp-slide-container');
-  if(!container) return;
-
-  const tasks    = state.tasks||[];
-  const activeTasks = tasks.filter(t=>t.status!=='done'&&!isScheduled(t));
-  const emp      = spQueue[idx];
-  if(!emp) return;
-
-  const empTasks = activeTasks.filter(t=>(t.assignees||[]).includes(emp));
-  const totalEmpTasks = tasks.filter(t=>(t.assignees||[]).includes(emp)).length;
-  const doneEmpTasks  = tasks.filter(t=>(t.assignees||[]).includes(emp)&&t.status==='done').length;
-  const rate     = totalEmpTasks>0?Math.round(doneEmpTasks/totalEmpTasks*100)+'%':null;
-  const allDone  = activeTasks.filter(t=>(t.assignees||[]).includes(emp)).length===0;
-  const col      = colorFor(emp);
-
-  const priOrd   = {high:0,medium:1,low:2};
-  const stLbl    = {todo:'To Do',inprogress:'In Progress'};
-  const stCls    = {todo:'tag-todo',inprogress:'tag-inp'};
-
-  const sortedTasks = [...empTasks].sort((a,b)=>priOrd[a.priority]-priOrd[b.priority]);
-
-  // Determine column layout
-  const cols = getColCount(sortedTasks.length);
-  const gridClass = cols === 1 ? 'single-task' : cols === 2 ? 'two-tasks' : '';
-
-  const html = `
-  <div class="spotlight-slide${animate?' ':''}active" id="sp-slide-current">
-    <div class="sp-emp-hdr">
-      <div class="sp-av" style="background:${col};">${initials(emp)}</div>
-      <div>
-        <div class="sp-emp-name">${emp}</div>
-        <div class="sp-emp-meta">${empTasks.length} active task${empTasks.length!==1?'s':''}</div>
-      </div>
-    </div>
-    <div class="sp-task-grid ${gridClass}" style="--sp-cols:${cols};">
-      ${sortedTasks.map((t,ti)=>{
-        return `<div class="sp-tc pri-${t.priority} st-${t.status}" style="animation-delay:${ti*0.08}s;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
-            <div class="sp-tc-title">${t.title}</div>
-            ${t.status==='inprogress'?'<span class="dot-pulse" style="margin-top:6px;"></span>':''}
-          </div>
-          ${t.startedAt&&t.status==='inprogress'?`<div class="sp-tc-timer">⏱ ${elapsedTime(t.startedAt)}</div>`:''}
-          ${t.schedDate?`<div class="sp-tc-date">📅 ${formatDate(t.schedDate)}</div>`:''}
-          ${t.notes?`<div class="sp-tc-notes">${t.notes}</div>`:''}
-          <div class="sp-tc-tags">
-            <span class="tag tag-${t.priority}">${t.priority}</span>
-            <span class="tag ${stCls[t.status]||'tag-todo'}">${stLbl[t.status]||t.status}</span>
-          </div>
-          <div class="sp-tc-actions">
-            <button class="ta-btn done-btn"   onclick="markDone('${t.id}')">✓ Done</button>
-            <button class="ta-btn inprog-btn" onclick="markInProgress('${t.id}')">${t.status==='inprogress'?'↩ Todo':'▶ Start'}</button>
-            <button class="ta-btn edit-btn"   onclick="openEditTask('${t.id}')">✎ Edit</button>
-            <button class="ta-btn del-btn"    onclick="deleteTask('${t.id}')">✕</button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>
-  </div>`;
-
-  container.innerHTML = html;
-
-  document.querySelectorAll('.sp-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
-}
-
-function startSpotlight(){
-  stopSpotlight();
-  if(spQueue.length <= 1){
-    renderSpotlightSlide(0, false);
-    resetProgressBar(false);
-    return;
-  }
-  resetProgressBar(true);
-  spTimer = setInterval(()=>{
-    advanceSpotlight();
-  }, SPOTLIGHT_SECS * 1000);
-}
-
-function stopSpotlight(){
-  if(spTimer)          { clearInterval(spTimer);  spTimer=null; }
-  if(spProgressTimer)  { clearInterval(spProgressTimer); spProgressTimer=null; }
-}
-
-function advanceSpotlight(){
-  if(spQueue.length === 0) return;
-  const container = document.getElementById('sp-slide-container');
-  const current   = document.getElementById('sp-slide-current');
-
-  if(current){
-    current.classList.remove('active');
-    current.classList.add('exit');
-    setTimeout(()=>{ if(current.parentNode) current.parentNode.removeChild(current); }, 500);
-  }
-
-  spIndex = (spIndex + 1) % spQueue.length;
-  renderSpotlightSlide(spIndex, true);
-  resetProgressBar(spQueue.length > 1);
-}
-
-function resetProgressBar(animate){
-  const fill = document.getElementById('sp-progress-fill');
-  if(!fill) return;
-  if(spProgressTimer){ clearInterval(spProgressTimer); spProgressTimer=null; }
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
-  if(!animate) return;
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      fill.style.transition = `width ${SPOTLIGHT_SECS}s linear`;
-      fill.style.width = '0%';
-    });
-  });
-}
-
-function scaleBoard(){ /* spotlight fills viewport naturally */ }
+function scaleBoard(){ /* grid fills viewport naturally via CSS grid */ }
 
 /* ═══════════════════════════════════════════════
    EXPOSE GLOBALS
